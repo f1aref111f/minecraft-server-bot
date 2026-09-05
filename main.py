@@ -18,7 +18,7 @@ def run_web():
 
 threading.Thread(target=run_web, daemon=True).start()
 
-# --- 2. ส่วนตั้งค่าบอท Discord (รองรับ Slash Commands แบบซิงค์เข้าเซิร์ฟเวอร์ทันที) ---
+# --- 2. ส่วนตั้งค่าบอท Discord (รองรับ Slash Commands และซิงค์เข้าเซิร์ฟเวอร์ของคุณทันที) ---
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 PUBLIC_CHANNEL_ID = int(os.getenv("PUBLIC_CHANNEL_ID", 0))
 ADMIN_CHANNEL_ID = int(os.getenv("ADMIN_CHANNEL_ID", 0))
@@ -31,12 +31,12 @@ class MyBot(discord.Client):
         self.tree = app_commands.CommandTree(self)
 
     async def setup_hook(self):
-        # 🛑 สำคัญ: แทนที่ตัวเลข 123456789012345678 ด้วย Server ID ของคุณ
-        MY_GUILD = discord.Object(id=123456789012345678)
+        # ใช้ Server ID ของคุณที่ระบุมา
+        MY_GUILD = discord.Object(id=1524782287709802557)
         
         self.tree.copy_global_to(guild=MY_GUILD)
         await self.tree.sync(guild=MY_GUILD)
-        print("Slash commands synced to guild.")
+        print("Slash commands synced to guild successfully!")
 
 bot = MyBot()
 
@@ -44,7 +44,7 @@ bot = MyBot()
 async def on_ready():
     print(f"Bot logged in as {bot.user}")
 
-# สร้างคำสั่ง /start
+# สร้าง Slash Command: /start
 @bot.tree.command(name="start", description="สั่งเปิดเซิร์ฟเวอร์ Aternos")
 async def start_server(interaction: discord.Interaction):
     if interaction.channel_id not in [PUBLIC_CHANNEL_ID, ADMIN_CHANNEL_ID]:
@@ -57,7 +57,7 @@ async def start_server(interaction: discord.Interaction):
     except Exception as e:
         await interaction.followup.send(f"❌ เกิดข้อผิดพลาด: {str(e)}")
 
-# สร้างคำสั่ง /status
+# สร้าง Slash Command: /status
 @bot.tree.command(name="status", description="ตรวจสอบสถานะบอท")
 async def server_status(interaction: discord.Interaction):
     if interaction.channel_id not in [PUBLIC_CHANNEL_ID, ADMIN_CHANNEL_ID]:

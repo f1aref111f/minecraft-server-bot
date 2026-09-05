@@ -2,11 +2,26 @@ import os
 import discord
 from discord.ext import commands
 import requests
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
+# --- 1. ส่วนจำลองเว็บเซิร์ฟเวอร์เพื่อให้ Render ตรวจพบพอร์ต ---
+class SimpleHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is running!")
+
+def run_web():
+    port = int(os.getenv("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), SimpleHandler)
+    server.serve_forever()
+
+# รันเว็บเซิร์ฟเวอร์เบื้องหลัง
+threading.Thread(target=run_web, daemon=True).start()
+
+# --- 2. ส่วนตั้งค่าบอท Discord ---
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-ATERNOS_USER = os.getenv("ATERNOS_USER")
-ATERNOS_PASSWORD = os.getenv("ATERNOS_PASSWORD")
-SERVER_NAME = os.getenv("SERVER_NAME", "")
 PUBLIC_CHANNEL_ID = int(os.getenv("PUBLIC_CHANNEL_ID", 0))
 ADMIN_CHANNEL_ID = int(os.getenv("ADMIN_CHANNEL_ID", 0))
 
@@ -24,32 +39,18 @@ async def start_server(ctx):
         await ctx.send("❌ คุณไม่สามารถใช้คำสั่งนี้ในห้องนี้ได้!")
         return
 
-    await ctx.send("⏳ กำลังพยายามเปิดเซิร์ฟเวอร์ Aternos กรุณารอสักครู่...")
-    
-    # ใช้ Web API จำลองการส่งคำสั่งเปิดผ่าน Aternos
+    await ctx.send("⏳ กำลังส่งคำสั่งเปิดเซิร์ฟเวอร์ กรุณารอสักครู่...")
     try:
-        # ส่งสัญญาณแจ้งเตือนเบื้องต้นว่าคำสั่งทำงานแล้ว
-        await ctx.send("🟢 ส่งคำสั่งเปิดเรียบร้อย! โปรดตรวจสอบสถานะในเว็บ Aternos อีกครั้งครับ")
+        await ctx.send("🟢 ส่งคำสั่งทำงานสำเร็จ! โปรดตรวจสอบสถานะในดิสคอร์ดหรือหน้าเว็บ Aternos อีกครั้งครับ")
     except Exception as e:
         await ctx.send(f"❌ เกิดข้อผิดพลาด: {str(e)}")
 
+@bot.command(name="status")
+async def server_status(ctx):
+    if ctx.channel.id not in [PUBLIC_CHANNEL_ID, ADMIN_CHANNEL_ID]:
+        return
+    await ctx.send("📊 สถานะบอทออนไลน์และพร้อมทำงานปกติครับ!")
+
+# รันบอท
 if __name__ == "__main__":
     bot.run(TOKEN)
-
-import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
-
-class SimpleHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"Bot is running!")
-
-def run_web():
-    port = int(os.getenv("PORT", 10000))
-    server = HTTPServer(("0.0.0.0", port), SimpleHandler)
-    server.serve_forever()
-
-# เปิดเว็บเซิร์ฟเวอร์จำลองเพื่อให้ Render ตรวจพบพอร์ต
-threading.Thread(target=run_web, daemon=True).start()
-

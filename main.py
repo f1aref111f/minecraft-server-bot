@@ -1,4 +1,4 @@
-import os
+ import os
 import discord
 from discord import app_commands
 import threading
@@ -31,9 +31,7 @@ class MyBot(discord.Client):
         self.tree = app_commands.CommandTree(self)
 
     async def setup_hook(self):
-        # ใช้ Server ID ของคุณ
         MY_GUILD = discord.Object(id=1524782287709802557)
-        
         self.tree.copy_global_to(guild=MY_GUILD)
         await self.tree.sync(guild=MY_GUILD)
         print("Slash commands synced to guild successfully!")
@@ -68,7 +66,6 @@ async def minecraft_command(interaction: discord.Interaction, cmd: str):
         await interaction.response.send_message("❌ คุณไม่สามารถใช้คำสั่งนี้ในห้องนี้ได้!", ephemeral=True)
         return
 
-    # บันทึกหรือจำลองการส่งคำสั่ง Minecraft
     await interaction.response.send_message(f"✅ บันทึกคำสั่งสำเร็จ: `{cmd}`\n*(คุณสามารถนำคำสั่งนี้ไปรันในเกมหรือคอนโซล Aternos ได้)*")
 
 if __name__ == "__main__":

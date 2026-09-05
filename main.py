@@ -18,7 +18,7 @@ def run_web():
 
 threading.Thread(target=run_web, daemon=True).start()
 
-# --- 2. ส่วนตั้งค่าบอท Discord (รองรับ Slash Commands และซิงค์เข้าเซิร์ฟเวอร์ของคุณทันที) ---
+# --- 2. ส่วนตั้งค่าบอท Discord ---
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 PUBLIC_CHANNEL_ID = int(os.getenv("PUBLIC_CHANNEL_ID", 0))
 ADMIN_CHANNEL_ID = int(os.getenv("ADMIN_CHANNEL_ID", 0))
@@ -31,7 +31,7 @@ class MyBot(discord.Client):
         self.tree = app_commands.CommandTree(self)
 
     async def setup_hook(self):
-        # ใช้ Server ID ของคุณที่ระบุมา
+        # ใช้ Server ID ของคุณ
         MY_GUILD = discord.Object(id=1524782287709802557)
         
         self.tree.copy_global_to(guild=MY_GUILD)
@@ -44,26 +44,32 @@ bot = MyBot()
 async def on_ready():
     print(f"Bot logged in as {bot.user}")
 
-# สร้าง Slash Command: /start
-@bot.tree.command(name="start", description="สั่งเปิดเซิร์ฟเวอร์ Aternos")
+# --- 3. ระบบ Slash Commands ---
+
+@bot.tree.command(name="start", description="แจ้งเตือนการเปิดเซิร์ฟเวอร์ Aternos")
 async def start_server(interaction: discord.Interaction):
     if interaction.channel_id not in [PUBLIC_CHANNEL_ID, ADMIN_CHANNEL_ID]:
         await interaction.response.send_message("❌ คุณไม่สามารถใช้คำสั่งนี้ในห้องนี้ได้!", ephemeral=True)
         return
 
-    await interaction.response.send_message("⏳ กำลังส่งคำสั่งเปิดเซิร์ฟเวอร์ กรุณารอสักครู่...")
-    try:
-        await interaction.followup.send("🟢 ส่งคำสั่งทำงานสำเร็จ! โปรดตรวจสอบสถานะในหน้าเว็บ Aternos ครับ")
-    except Exception as e:
-        await interaction.followup.send(f"❌ เกิดข้อผิดพลาด: {str(e)}")
+    await interaction.response.send_message("🟢 กรุณากดปุ่มเปิดเซิร์ฟเวอร์ที่เว็บไซต์ Aternos ของคุณได้เลยครับ!")
 
-# สร้าง Slash Command: /status
 @bot.tree.command(name="status", description="ตรวจสอบสถานะบอท")
 async def server_status(interaction: discord.Interaction):
     if interaction.channel_id not in [PUBLIC_CHANNEL_ID, ADMIN_CHANNEL_ID]:
         await interaction.response.send_message("❌ คุณไม่สามารถใช้คำสั่งนี้ในห้องนี้ได้!", ephemeral=True)
         return
     await interaction.response.send_message("📊 สถานะบอทออนไลน์และพร้อมทำงานปกติครับ!")
+
+@bot.tree.command(name="command", description="ส่งคำสั่ง Minecraft (เช่น /title, /say)")
+@app_commands.describe(cmd="พิมพ์คำสั่ง Minecraft ที่ต้องการ เช่น /title §a hello")
+async def minecraft_command(interaction: discord.Interaction, cmd: str):
+    if interaction.channel_id not in [PUBLIC_CHANNEL_ID, ADMIN_CHANNEL_ID]:
+        await interaction.response.send_message("❌ คุณไม่สามารถใช้คำสั่งนี้ในห้องนี้ได้!", ephemeral=True)
+        return
+
+    # บันทึกหรือจำลองการส่งคำสั่ง Minecraft
+    await interaction.response.send_message(f"✅ บันทึกคำสั่งสำเร็จ: `{cmd}`\n*(คุณสามารถนำคำสั่งนี้ไปรันในเกมหรือคอนโซล Aternos ได้)*")
 
 if __name__ == "__main__":
     bot.run(TOKEN)

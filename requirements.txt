@@ -1,4 +1,6 @@
 discord.py
 python-aternos
+lxml>=4.9.0
+
 
 

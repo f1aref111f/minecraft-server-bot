@@ -35,3 +35,21 @@ async def start_server(ctx):
 
 if __name__ == "__main__":
     bot.run(TOKEN)
+
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+class SimpleHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is running!")
+
+def run_web():
+    port = int(os.getenv("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), SimpleHandler)
+    server.serve_forever()
+
+# เปิดเว็บเซิร์ฟเวอร์จำลองเพื่อให้ Render ตรวจพบพอร์ต
+threading.Thread(target=run_web, daemon=True).start()
+

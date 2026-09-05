@@ -1,79 +1,65 @@
 import os
 import discord
 from discord.ext import commands
-from py_aternos import Client as AternosClient
+from pyaternos import AternosAccount
 
-# ตั้งค่า Discord Bot Intents
+# ดึงค่าจาก Environment Variables บน Render
+TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+ATERNOS_USER = os.getenv("ATERNOS_USER")
+ATERNOS_PASSWORD = os.getenv("ATERNOS_PASSWORD")
+SERVER_NAME = os.getenv("SERVER_NAME")
+PUBLIC_CHANNEL_ID = int(os.getenv("PUBLIC_CHANNEL_ID", 0))
+ADMIN_CHANNEL_ID = int(os.getenv("ADMIN_CHANNEL_ID", 0))
+
+# ตั้งค่าบอท Discord
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# ตั้งค่าบัญชี Aternos ของคุณ (ดึงจาก Environment Variables ตอนเอาไปรันบน Render)
-ATERNOS_USER = os.getenv("ATERNOS_USER")
-ATERNOS_PASSWORD = os.getenv("ATERNOS_PASSWORD")
-SERVER_NAME = os.getenv("SERVER_NAME") # ชื่อหรือ URL ของเซิร์ฟเวอร์ Aternos
-
-# ตั้งค่า ID ของช่องดิสคอร์ด (นำไอดีมาใส่แทนที่เลข 0 ด้านล่าง)
-PUBLIC_CHANNEL_ID = int(os.getenv("PUBLIC_CHANNEL_ID", "0"))  # ช่องสำหรับทุกคนกด Start
-ADMIN_CHANNEL_ID = int(os.getenv("ADMIN_CHANNEL_ID", "0"))    # ช่องสำหรับแอดมิน (Start/Stop)
-
+# ฟังก์ชันเชื่อมต่อ Aternos
 def get_server():
-    aternos = AternosClient.from_credentials(ATERNOS_USER, AternosPASSWORD)
-    servers = aternos.servers()
+    account = AternosAccount.from_credentials(ATERNOS_USER, Aternos_PASSWORD)
+    servers = account.servers
     for s in servers:
-        if s.domain == SERVER_NAME or s.name.lower() == SERVER_NAME.lower():
+        if SERVER_NAME.lower() in s.domain.lower() or SERVER_NAME.lower() in s.name.lower():
             return s
-    if servers:
-        return servers[0]
-    return None
+    return servers[0] # ถ้าไม่เจอชื่อ ให้เลือกเซิร์ฟเวอร์แรกสุด
 
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user} (ID: {bot.user.id})")
-    print("Bot is ready and connected to Discord!")
+    print(f"Bot logged in as {bot.user}")
 
 @bot.command(name="start")
 async def start_server(ctx):
-    # อนุญาตให้ใช้คำสั่ง Start ได้ทั้งช่อง Public และ Admin
+    # เช็คว่ากดในห้องสาธารณะหรือห้องแอดมินไหม
     if ctx.channel.id not in [PUBLIC_CHANNEL_ID, ADMIN_CHANNEL_ID]:
-        await ctx.send("❌ คุณไม่สามารถใช้คำสั่งนี้ในช่องนี้ได้ครับ!")
+        await ctx.send("❌ คุณไม่สามารถใช้คำสั่งนี้ในห้องนี้ได้!")
         return
 
-    await ctx.send("⏳ กำลังส่งคำสั่งเปิดเซิร์ฟเวอร์ Aternos รอสักครู่นะครับ...")
+    await ctx.send("⏳ กำลังส่งคำสั่งเปิดเซิร์ฟเวอร์ Aternos กรุณารอสักครู่...")
     
     try:
         server = get_server()
-        if server:
+        if server.status == "online":
+            await ctx.send("⚠️ เซิร์ฟเวอร์เปิดทำงานอยู่แล้วครับ!")
+        else:
             server.start()
-            await ctx.send("✅ ระบบได้ทำการสั่งเปิดเซิร์ฟเวอร์ Aternos เรียบร้อยแล้ว! (รอสักครู่เพื่อให้เซิร์ฟเวอร์บูทติด)")
-        else:
-            await ctx.send("❌ ไม่พบเซิร์ฟเวอร์ Aternos ที่ตั้งค่าไว้ กรุณาตรวจสอบชื่อเซิร์ฟเวอร์อีกครั้ง")
+            await ctx.send("🟢 กำลังเปิดเซิร์ฟเวอร์แล้ว! รอสักครู่สามารถกดเข้าเกมได้เลย")
     except Exception as e:
-        await ctx.send(f"⚠️ เกิดข้อผิดพลาดในการเชื่อมต่อ Aternos: {str(e)}")
+        await ctx.send(f"❌ เกิดข้อผิดพลาด: {str(e)}")
 
-@bot.command(name="stop")
-async def stop_server(ctx):
-    # คำสั่ง Stop ต้องใช้ในช่อง Admin เท่านั้นเพื่อความปลอดภัย
-    if ctx.channel.id != ADMIN_CHANNEL_ID:
-        await ctx.send("❌ คำสั่งนี้ใช้ได้เฉพาะในช่องแอดมินเท่านั้น!")
+@bot.command(name="status")
+async def server_status(ctx):
+    if ctx.channel.id not in [PUBLIC_CHANNEL_ID, ADMIN_CHANNEL_ID]:
         return
 
-    await ctx.send("⏳ กำลังส่งคำสั่งปิดเซิร์ฟเวอร์...")
-    
     try:
         server = get_server()
-        if server:
-            server.stop()
-            await ctx.send("🛑 สั่งปิดเซิร์ฟเวอร์ Aternos เรียบร้อยแล้วครับ")
-        else:
-            await ctx.send("❌ ไม่พบเซิร์ฟเวอร์ Aternos")
+        status_text = f"สถานะเซิร์ฟเวอร์: **{server.status.upper()}** (ผู้เล่น: {server.players.current}/{server.players.max})"
+        await ctx.send(status_text)
     except Exception as e:
-        await ctx.send(f"⚠️ เกิดข้อผิดพลาด: {str(e)}")
+        await ctx.send(f"❌ เกิดข้อผิดพลาดในการเช็คสถานะ: {str(e)}")
 
-# ดึง Token ของบอทจาก Environment Variables ของ Render
-TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-if TOKEN:
+# รันบอท
+if __name__ == "__main__":
     bot.run(TOKEN)
-else:
-    print("❌ Error: ไม่พบ DISCORD_BOT_TOKEN กรุณาตั้งค่าใน Environment Variables")
-  
